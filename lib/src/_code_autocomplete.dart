@@ -62,7 +62,8 @@ class _DefaultCodeAutocompletePromptsBuilder implements DefaultCodeAutocompleteP
     final Iterable<CodePrompt> prompts;
     final String input;
     if (charactersBefore.takeLast(1).string == '.') {
-      input = '';
+      ///这部分其实应该删除，做自动补全应该放在外面
+      input = '.';
       int start = charactersBefore.length - 2;
       for (; start >= 0; start--) {
         if (!charactersBefore.elementAt(start).isValidVariablePart) {
@@ -99,14 +100,12 @@ class _DefaultCodeAutocompletePromptsBuilder implements DefaultCodeAutocompleteP
         );
       }
     }
-    if (prompts.isEmpty) {
+
+    ///禁止内置硬编码
+    /*if (prompts.isEmpty) {
       return null;
-    }
-    return CodeAutocompleteEditingValue(
-      input: input,
-      prompts: prompts.toList(),
-      index: 0
-    );
+    }*/
+    return CodeAutocompleteEditingValue(input: input, prompts: prompts.toList(), index: 0, selection: selection);
   }
 
 }
@@ -117,11 +116,13 @@ class _CodeAutocomplete extends StatefulWidget {
     required this.viewBuilder,
     required this.promptsBuilder,
     required this.child,
+    required this.lsp,
   });
 
   final CodeAutocompleteWidgetBuilder viewBuilder;
   final CodeAutocompletePromptsBuilder promptsBuilder;
   final Widget child;
+  final bool lsp;
 
   @override
   State<StatefulWidget> createState() => _CodeAutocompleteState();
@@ -175,6 +176,7 @@ class _CodeAutocompleteState extends State<_CodeAutocomplete> {
     );
   }
 
+
   @override
   void didUpdateWidget(covariant _CodeAutocomplete oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -204,14 +206,34 @@ class _CodeAutocompleteState extends State<_CodeAutocomplete> {
       value.codeLines[value.selection.extentIndex],
       value.selection,
     );
-    if (autocompleteEditingValue == null) {
+    //杜绝硬编码 他只要有输入就可以使用
+    if (autocompleteEditingValue == null || autocompleteEditingValue.input == '') {
+      return;
+    }
+    if (autocompleteEditingValue.prompts.isEmpty && !widget.lsp) {
       return;
     }
     _notifier = ValueNotifier(autocompleteEditingValue);
     _onAutocomplete = onAutocomplete;
     _overlayEntry = OverlayEntry(
       builder:(context) {
-        return _buildWidget(context, layerLink, position, lineHeight);
+        return Center(
+          child: FutureBuilder<Widget>(
+            future: _buildWidget(context, layerLink, position, lineHeight),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(); //const CircularProgressIndicator();
+              } else if (snapshot.hasError) {
+                print('异步错误: ${snapshot.error}');
+                return Container();
+              } else if (snapshot.hasData) {
+                return snapshot.data!;
+              } else {
+                return Container();
+              }
+            },
+          ),
+        );
       },
     );
     Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
@@ -228,8 +250,8 @@ class _CodeAutocompleteState extends State<_CodeAutocomplete> {
     _selectAction.setEnabled(false);
   }
 
-  Widget _buildWidget(BuildContext context, LayerLink layerLink, Offset position, double lineHeight) {
-    final PreferredSizeWidget child = widget.viewBuilder(context, _notifier!, (result) {
+  Future<Widget> _buildWidget(BuildContext context, LayerLink layerLink, Offset position, double lineHeight) async{
+    final PreferredSizeWidget child = await widget.viewBuilder(context, _notifier!, (result) {
       _onAutocomplete?.call(result);
     });
     final Size screenSize =  MediaQuery.of(context).size;

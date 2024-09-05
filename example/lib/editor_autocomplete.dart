@@ -8,79 +8,6 @@ import 'package:re_editor_exmaple/menu.dart';
 import 'package:re_highlight/languages/dart.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
 
-const List<CodePrompt> _kStringPrompts = [
-  CodeFieldPrompt(
-    word: 'length',
-    type: 'int'
-  ),
-  CodeFieldPrompt(
-    word: 'isEmpty',
-    type: 'bool'
-  ),
-  CodeFieldPrompt(
-    word: 'isNotEmpty',
-    type: 'bool'
-  ),
-  CodeFieldPrompt(
-    word: 'characters',
-    type: 'Characters'
-  ),
-  CodeFieldPrompt(
-    word: 'hashCode',
-    type: 'int'
-  ),
-  CodeFieldPrompt(
-    word: 'codeUnits',
-    type: 'List<int>'
-  ),
-  CodeFieldPrompt(
-    word: 'runes',
-    type: 'Runes'
-  ),
-  CodeFunctionPrompt(
-    word: 'codeUnitAt',
-    type: 'int',
-    parameters: {
-      'index': 'int'
-    }
-  ),
-  CodeFunctionPrompt(
-    word: 'replaceAll',
-    type: 'String',
-    parameters: {
-      'from': 'Pattern',
-      'replace': 'String',
-    }
-  ),
-  CodeFunctionPrompt(
-    word: 'contains',
-    type: 'bool',
-    parameters: {
-      'other': 'String',
-    }
-  ),
-  CodeFunctionPrompt(
-    word: 'split',
-    type: 'List<String>',
-    parameters: {
-      'pattern': 'Pattern',
-    }
-  ),
-  CodeFunctionPrompt(
-    word: 'endsWith',
-    type: 'bool',
-    parameters: {
-      'other': 'String',
-    }
-  ),
-  CodeFunctionPrompt(
-    word: 'startsWith',
-    type: 'bool',
-    parameters: {
-      'other': 'String',
-    }
-  )
-];
 
 class AutoCompleteEditor extends StatefulWidget {
 
@@ -94,6 +21,7 @@ class AutoCompleteEditor extends StatefulWidget {
 class _AutoCompleteEditorState extends State<AutoCompleteEditor> {
 
   final CodeLineEditingController _controller = CodeLineEditingController();
+  final Map<String, List<CodePrompt>> relatedPrompts =  {};
 
   @override
   void initState() {
@@ -106,7 +34,20 @@ class _AutoCompleteEditorState extends State<AutoCompleteEditor> {
   @override
   Widget build(BuildContext context) {
     return CodeAutocomplete(
-      viewBuilder: (context, notifier, onSelected) {
+      lsp: true,
+      viewBuilder: (context, notifier, onSelected) async{
+        List<CodePrompt> propmt = [CodeFieldPrompt(word: 'cid', type: '字段')];
+        List<CodePrompt> propmt2 = [CodeFieldPrompt(word: 'zid', type: '字段')];
+        relatedPrompts.clear();
+        if(notifier.value.input.toLowerCase().startsWith('c')){
+          print('start c');
+            relatedPrompts.addAll({'cu':propmt});
+          notifier.value.prompts.addAll([CodeKeywordPrompt(word: 'custNo')]);
+        }else if(notifier.value.input.toLowerCase().startsWith('z')){
+          relatedPrompts.addAll({'zu':propmt2});
+          notifier.value.prompts.addAll([CodeKeywordPrompt(word: 'zustNo')]);
+        }
+
         return _DefaultCodeAutocompleteListView(
           notifier: notifier,
           onSelected: onSelected,
@@ -131,10 +72,7 @@ class _AutoCompleteEditorState extends State<AutoCompleteEditor> {
             }
           )
         ],
-        relatedPrompts: {
-          'foo': _kStringPrompts,
-          'bar': _kStringPrompts,
-        },
+        relatedPrompts: relatedPrompts,
       ),
       child: CodeEditor(
         style: CodeEditorStyle(

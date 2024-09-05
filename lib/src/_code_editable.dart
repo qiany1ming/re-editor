@@ -400,16 +400,14 @@ class _CodeEditableState extends State<_CodeEditable> with AutomaticKeepAliveCli
       value: widget.controller.value,
       onAutocomplete: (value) {
         autocompleteState.dismiss();
-        final CodeLineSelection selection = widget.controller.selection;
-        widget.controller.replaceSelection(value.text);
-        widget.controller.selection = selection.copyWith(
-          baseOffset: selection.baseOffset + value.selection.baseOffset,
-          extentOffset: selection.extentOffset + value.selection.extentOffset,
-        );
-      }
-    );
+          //final CodeLineSelection selection = widget.controller.selection;
+          widget.controller.replaceSelection(value.text, value.replaceRange);
+          /*widget.controller.selection = selection.copyWith(
+            baseOffset: selection.baseOffset + value.selection.baseOffset,
+            extentOffset: selection.extentOffset + value.selection.extentOffset,
+          );*/
+        });
   }
-
 }
 
 class _CodeCursorBlinkController extends ValueNotifier<bool> {
